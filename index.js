@@ -4,7 +4,7 @@ window.addEventListener('load', async () => {
   const response = await fetch('Prag.img');
   const arrayBuffer = await response.arrayBuffer();
   const dataView = new DataView(arrayBuffer);
-  document.body.textContent = JSON.stringify(new GarminImg(dataView), null, 2);
+  document.body.textContent = JSON.stringify(new GarminImg(dataView).subfiles, null, 2);
 });
 
 class GarminImg {
@@ -72,6 +72,7 @@ class GarminImg {
 
 class GarminRgnSubfile {
   constructor(/** @type{DataView} */ dataView) {
+    this.type = 'RGN';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -85,6 +86,7 @@ class GarminRgnSubfile {
 
 class GarminTreSubfile {
   constructor(/** @type{DataView} */ dataView) {
+    this.type = 'TRE';
     this.locked = dataView.getUint8(0xd);
     if (this.locked !== 0) {
       throw new Error(`The TRE section at offset ${dataView.byteOffset} is locked ('${this.locked}').`)
@@ -122,12 +124,12 @@ class GarminTreSubfile {
       // TODO
     }
 
-    const mapLevelDataView = new DataView(dataView.buffer, this.mapLevelsOffset);
+    const mapLevelDataView = new DataView(dataView.buffer, dataView.byteOffset + this.mapLevelsOffset);
     for (let index = 0; index < this.mapLevelsSize / 4; index++) {
       const zoom = mapLevelDataView.getUint8(index * 4 + 0x0);
       this.zoomLevel = (zoom & (1 << 3)) + (zoom & (1 << 2)) + (zoom & (1 << 1)) + (zoom & (1 << 0));
-      if (zoom & (1 << 4) + zoom & (1 << 5) + zoom & (1 << 6) > 0) {
-        throw new Error(`The unknown section isn't all zeroes unlike expected.`);
+      if ((zoom & (1 << 4)) + (zoom & (1 << 5)) + (zoom & (1 << 6)) > 0) {
+        //throw new Error(`The unknown section isn't all zeroes unlike expected.`);
       }
 
       this.inherited = zoom & (1 << 7) ? true : false;
@@ -136,7 +138,7 @@ class GarminTreSubfile {
     }
 
     // TODO: Account for the fact that subdivisions vary in size depending on map level between 14 and 16 bytes
-    const subdivisionsDataView = new DataView(dataView.buffer, this.subdivisionsOffset);
+    const subdivisionsDataView = new DataView(dataView.buffer, dataView.byteOffset + this.subdivisionsOffset);
     for (let index = 0; index < 1; index++) {
       // TODO: Check this is actually correct
       // Convert from 24 bit to 32 bit
@@ -161,6 +163,7 @@ class GarminTreSubfile {
 
 class GarminLblSubfile {
   constructor(/** @type{DataView} */ dataView) {
+    this.type = 'LBL';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -172,6 +175,7 @@ class GarminLblSubfile {
 
 class GarminNetSubfile {
   constructor(/** @type{DataView} */ dataView) {
+    this.type = 'NET';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -183,6 +187,7 @@ class GarminNetSubfile {
 
 class GarminNodSubfile {
   constructor(/** @type{DataView} */ dataView) {
+    this.type = 'NOD';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -194,6 +199,7 @@ class GarminNodSubfile {
 
 class GarminMdrSubfile {
   constructor(/** @type{DataView} */ dataView) {
+    this.type = 'MDR';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -205,11 +211,24 @@ class GarminMdrSubfile {
 
 class GarminSrtSubfile {
   constructor(/** @type{DataView} */ dataView) {
+    this.type = 'SRT';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
     this.creationHour = dataView.getUint8(0x12);
     this.creationMinute = dataView.getUint8(0x13);
     this.creationSecond = dataView.getUint8(0x14);
+  }
+}
+
+class GarminLtdSubfile {
+  constructor(/** @type{DataView} */ dataView) {
+    this.type = 'LTD';
+  }
+}
+
+class GarminImaSubfile {
+  constructor(/** @type{DataView} */ dataView) {
+    this.type = 'IMA';
   }
 }
