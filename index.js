@@ -5,7 +5,7 @@ window.addEventListener('load', async () => {
   const arrayBuffer = await response.arrayBuffer();
   const dataView = new DataView(arrayBuffer);
   const garminImg = new GarminImg(dataView);
-  document.body.textContent = JSON.stringify(garminImg.subfiles, null, 2);
+  document.body.textContent = JSON.stringify(garminImg, null, 2);
 });
 
 class GarminImg {
@@ -50,7 +50,7 @@ class GarminImg {
     const blockSize = 512;
     const blockCount = fatLength / blockSize;
 
-    const files = [];
+    this.files = [];
 
     for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
       const blockDataView = new DataView(dataView.buffer, fatOffset + blockIndex * 512);
@@ -70,15 +70,15 @@ class GarminImg {
 
       let file;
       if (blockSubfilePart === 0) {
-        file = files.find(f => f.name === blockSubfileName && f.type === blockSubfileType);
+        file = this.files.find(f => f.name === blockSubfileName && f.type === blockSubfileType);
         if (file) {
           throw new Error('File already exists!');
         }
 
         file = { name: blockSubfileName, type: blockSubfileType, size: blockSubfileSize };
-        files.push(file);
+        this.files.push(file);
       } else {
-        file = files.find(f => f.name === blockSubfileName && f.type === blockSubfileType);
+        file = this.files.find(f => f.name === blockSubfileName && f.type === blockSubfileType);
         if (!file) {
           throw new Error('File does not exist!');
         }
@@ -117,29 +117,31 @@ class GarminImg {
 
     // These offsets found using the FAT:
     // 19456, 89600, 90624, 102912, 197120, 391168, 489472, 490496, 508416, 627200, 882688, 976896, 977920, 993280, 1098752, 1322496, 1395712, 1396736, 1408000, 1495552, 1686016, 1780736, 1781760, 1801216, 1914368, 2152960, 2175488
-    for (const file of files) {
+    for (const file of this.files) {
       file.offset = file.blocks.sequenceNumber * 512;
+
+      // TODO: Keep this to calculate the data view size in the loop below later on
+      delete file.blocks;
     }
 
     // TODO: Find out why these offsets do not appear in the FAT (these were found by full text search for "GARMIN ")
-    files.push({ offset: 93229, type: 'LTD' });
-    files.push({ offset: 93295, type: 'LTD' });
-    files.push({ offset: 93311, type: 'IMA' });
-    files.push({ offset: 494571, type: 'LTD' });
-    files.push({ offset: 494637, type: 'LTD' });
-    files.push({ offset: 494653, type: 'IMA' });
-    files.push({ offset: 981385, type: 'LTD' });
-    files.push({ offset: 981451, type: 'LTD' });
-    files.push({ offset: 981467, type: 'IMA' });
-    files.push({ offset: 1399165, type: 'LTD' });
-    files.push({ offset: 1399231, type: 'LTD' });
-    files.push({ offset: 1399247, type: 'IMA' });
-    files.push({ offset: 1787695, type: 'LTD' });
-    files.push({ offset: 1787761, type: 'LTD' });
-    files.push({ offset: 1787777, type: 'IMA' });
+    this.files.push({ offset: 93229, type: 'LTD' });
+    this.files.push({ offset: 93295, type: 'LTD' });
+    this.files.push({ offset: 93311, type: 'IMA' });
+    this.files.push({ offset: 494571, type: 'LTD' });
+    this.files.push({ offset: 494637, type: 'LTD' });
+    this.files.push({ offset: 494653, type: 'IMA' });
+    this.files.push({ offset: 981385, type: 'LTD' });
+    this.files.push({ offset: 981451, type: 'LTD' });
+    this.files.push({ offset: 981467, type: 'IMA' });
+    this.files.push({ offset: 1399165, type: 'LTD' });
+    this.files.push({ offset: 1399231, type: 'LTD' });
+    this.files.push({ offset: 1399247, type: 'IMA' });
+    this.files.push({ offset: 1787695, type: 'LTD' });
+    this.files.push({ offset: 1787761, type: 'LTD' });
+    this.files.push({ offset: 1787777, type: 'IMA' });
 
-    this.subfiles = [];
-    for (const file of files) {
+    for (const file of this.files) {
       // TODO: Figure this file out
       if (file.name === 'MAKEGMAP') {
         continue;
@@ -153,15 +155,15 @@ class GarminImg {
       }
 
       switch (file.type) {
-        case 'RGN': this.subfiles.push(new GarminRgnSubfile(subfileDataView)); break;
-        case 'TRE': this.subfiles.push(new GarminTreSubfile(subfileDataView)); break;
-        case 'LBL': this.subfiles.push(new GarminTreSubfile(subfileDataView)); break;
-        case 'NET': this.subfiles.push(new GarminNetSubfile(subfileDataView)); break;
-        case 'NOD': this.subfiles.push(new GarminNodSubfile(subfileDataView)); break;
-        case 'MDR': this.subfiles.push(new GarminMdrSubfile(subfileDataView)); break;
-        case 'SRT': this.subfiles.push(new GarminSrtSubfile(subfileDataView)); break;
-        case 'LTD': this.subfiles.push(new GarminLtdSubfile(subfileDataView)); break;
-        case 'IMA': this.subfiles.push(new GarminImaSubfile(subfileDataView)); break;
+        case 'RGN': file.subfile = new GarminRgnSubfile(subfileDataView); break;
+        case 'TRE': file.subfile = new GarminTreSubfile(subfileDataView); break;
+        case 'LBL': file.subfile = new GarminTreSubfile(subfileDataView); break;
+        case 'NET': file.subfile = new GarminNetSubfile(subfileDataView); break;
+        case 'NOD': file.subfile = new GarminNodSubfile(subfileDataView); break;
+        case 'MDR': file.subfile = new GarminMdrSubfile(subfileDataView); break;
+        case 'SRT': file.subfile = new GarminSrtSubfile(subfileDataView); break;
+        case 'LTD': file.subfile = new GarminLtdSubfile(subfileDataView); break;
+        case 'IMA': file.subfile = new GarminImaSubfile(subfileDataView); break;
         default: throw new Error(`Unpexpected subfile type: '${file.type}' at offset ${file.offset}.`);
       }
     }
@@ -170,7 +172,6 @@ class GarminImg {
 
 class GarminRgnSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'RGN';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -184,7 +185,6 @@ class GarminRgnSubfile {
 
 class GarminTreSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'TRE';
     this.locked = dataView.getUint8(0xd);
     if (this.locked !== 0) {
       throw new Error(`The TRE section at offset ${dataView.byteOffset} is locked ('${this.locked}').`)
@@ -261,7 +261,6 @@ class GarminTreSubfile {
 
 class GarminLblSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'LBL';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -273,7 +272,6 @@ class GarminLblSubfile {
 
 class GarminNetSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'NET';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -285,7 +283,6 @@ class GarminNetSubfile {
 
 class GarminNodSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'NOD';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -297,7 +294,6 @@ class GarminNodSubfile {
 
 class GarminMdrSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'MDR';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -309,7 +305,6 @@ class GarminMdrSubfile {
 
 class GarminSrtSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'SRT';
     this.creationYear = dataView.getUint16(0xe, true);
     this.creationMonth = dataView.getUint8(0x10);
     this.creationDay = dataView.getUint8(0x11);
@@ -321,12 +316,10 @@ class GarminSrtSubfile {
 
 class GarminLtdSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'LTD';
   }
 }
 
 class GarminImaSubfile {
   constructor(/** @type{DataView} */ dataView) {
-    this.type = 'IMA';
   }
 }
