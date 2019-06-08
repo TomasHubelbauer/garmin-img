@@ -42,55 +42,16 @@ class GarminImg {
     this.mapDescription = String.fromCharCode(...new Uint8Array(dataView.buffer.slice(0x49, 0x5d)));
     this.mapName = String.fromCharCode(...new Uint8Array(dataView.buffer.slice(0x65, 0x83 /* Drop \0 terminator */))).trim();
 
-    // TODO: Figure out how to calculate the subsequent offsets (the FAT?)
+    // TODO: Figure out how to calculate these (the FAT?)
+    const handFoundOffsets = [19456, /* RGN */ 89600, /* TRE */ 90624, /* LBL */ 93229, /* LTD */ 93295, /* LTD */ 93311, /* IMA */ 102912, /* NET */ 197120, /* NOD */ 391168, /* RGN */ 489472, /* TRE */ 490496, /* LBL */ 494571, /* LTD */ 494637, /* LTD */ 494653, /* IMA */ 508416, /* NET */ 627200, /* NOD */ 882688, /* RGN */ 976896, /* TRE */ 977920, /* LBL */ 981385, /* LTD */ 981451, /* LTD */ 981467, /* IMA */ 993280, /* NET */ 1098752, /* NOD */ 1322496, /* RGN */ 1395712, /* TRE */ 1396736, /* LBL */ 1399165, /* LTD */ 1399231, /* LTD */ 1399247, /* IMA */ 1408000, /* NET */ 1495552, /* NOD */ 1686016, /* RGN */ 1780736, /* TRE */ 1781760, /* LBL */ 1787695, /* LTD */ 1787761, /* LTD */ 1787777, /* IMA */ 1801216, /* NET */ 1914368, /* NOD */ 2152960, /* MDR */ 2175488, /* SRT */];
+
     const firstSubfileOffset = dataView.getUint32(0x40c, true);
-    const offsets = [
-      firstSubfileOffset, // 19456 RGN
-      89600, // TRE
-      90624, // LBL
-      93229, // LTD
-      93295, // LTD
-      93311, // IMA
-      102912, // NET
-      197120, // NOD
-      391168, // RGN
-      489472, // TRE
-      490496, // LBL
-      494571, // LTD
-      494637, // LTD
-      494653, // IMA
-      508416, // NET
-      627200, // NOD
-      882688, // RGN
-      976896, // TRE
-      977920, // LBL
-      981385, // LTD
-      981451, // LTD
-      981467, // IMA
-      993280, // NET
-      1098752, // NOD
-      1322496, // RGN
-      1395712, // TRE
-      1396736, // LBL
-      1399165, // LTD
-      1399231, // LTD
-      1399247, // IMA
-      1408000, // NET
-      1495552, // NOD
-      1686016, // RGN
-      1780736, // TRE
-      1781760, // LBL
-      1787695, // LTD
-      1787761, // LTD
-      1787777, // IMA
-      1801216, // NET
-      1914368, // NOD
-      2152960, // MDR
-      2175488, // SRT
-    ];
+    if (firstSubfileOffset !== handFoundOffsets[0]) {
+      throw new Error(`The first subfile offset doesn't match anymore.`);
+    }
 
     this.subfiles = [];
-    for (const offset of offsets) {
+    for (const offset of handFoundOffsets) {
       const subfileDataView = new DataView(dataView.buffer, offset);
       const type = String.fromCharCode(...new Uint8Array(subfileDataView.buffer.slice(offset + 0x2, offset + 0xc)));
       switch (type) {
