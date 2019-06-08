@@ -93,14 +93,14 @@ class GarminTreSubfile {
     for (let index = 0; index < 10; index++) {
       const subdivision = {};
 
-      subdivision.rgnOffset = this.getUnint32From3Bytes(subdivisionsDataView, index * 14);
+      subdivision.rgnOffset = subdivisionsDataView.getUint24(index * 14, true);
       subdivision.types = subdivisionsDataView.getUint8(index * 14 + 0x3);
       subdivision.hasPoints = (subdivision.types & 0x10) !== 0;
       subdivision.hasIndexedPoints = (subdivision.types & 0x20) !== 0;
       subdivision.hasPolylines = (subdivision.types & 0x40) !== 0;
       subdivision.hasPolygons = (subdivision.types & 0x80) !== 0;
-      subdivision.longitudeCenter = this.getUnint32From3Bytes(subdivisionsDataView, index * 14 + 0x4);
-      subdivision.latitudeCenter = this.getUnint32From3Bytes(subdivisionsDataView, index * 14 + 0x7);
+      subdivision.longitudeCenter = subdivisionsDataView.getUint24(index * 14 + 0x4, true);
+      subdivision.latitudeCenter = subdivisionsDataView.getUint24(index * 14 + 0x7, true);
 
       // TODO: Find out how to bitshift this so that the last bit (terminator) gets lost - including endianness concerns
       subdivision.width = subdivisionsDataView.getUint16(index * 14 + 0xa);
@@ -146,14 +146,5 @@ class GarminTreSubfile {
       point.subtype = pointsDataView.getUint8(2);
       this.points.push(point);
     }
-  }
-
-  // TODO: Check this is actually correct - looks like it is not
-  getUnint32From3Bytes(/** @type{DataView} */ sourceDataView, offset) {
-    const dataView = new DataView(new ArrayBuffer(4));
-    dataView.setUint8(0, sourceDataView.getUint8(offset + 0x0));
-    dataView.setUint8(1, sourceDataView.getUint8(offset + 0x1));
-    dataView.setUint8(2, sourceDataView.getUint8(offset + 0x2));
-    return dataView.getUint32(0, true);
   }
 }
